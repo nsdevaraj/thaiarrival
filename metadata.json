@@ -1,0 +1,8 @@
+{
+  "name": "Thai Arrival Card Auto-Filler",
+  "description": "Scans your passport to extract details and automatically populates the information needed for the Thailand Digital Arrival Card.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": []
+}
