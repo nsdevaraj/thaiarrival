@@ -32,9 +32,9 @@ export const initialArrivalData: ArrivalData = {
   arrivalDate: "",
   entryPort: "",
   accommodationType: "",
-  accommodationName: "",
-  addressInThailand: "",
+  accommodationName: "Alameda Suites Co.,Ltd.",
+  addressInThailand: "27/5 Kaoom Rd. Pomprab Bangkok 10100 Thailand",
   email: "",
   phone: "",
-  purposeOfVisit: "",
+  purposeOfVisit: "Tourism",
 };

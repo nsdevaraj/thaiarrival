@@ -13,12 +13,18 @@ export function MrzInputModal({ onCapture, onClose }: MrzInputModalProps) {
 
   const handleSubmit = () => {
     try {
-      const lines = mrzText
+      let lines = mrzText
         .split("\n")
-        .map(l => l.trim().toUpperCase())
+        .map(l => l.trim().toUpperCase().replace(/\s+/g, ""))
         .filter(l => l.length > 0);
 
-      if (lines.length < 2) {
+      if (lines.length === 2) {
+        const longest = Math.max(lines[0].length, lines[1].length);
+        const targetLen = longest <= 36 && longest > 30 ? 36 : 44;
+        lines = lines.map(l => l.padEnd(targetLen, '<').substring(0, targetLen));
+      } else if (lines.length === 3) {
+        lines = lines.map(l => l.padEnd(30, '<').substring(0, 30));
+      } else if (lines.length < 2) {
         throw new Error("MRZ must contain at least 2 lines.");
       }
 

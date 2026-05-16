@@ -1,4 +1,4 @@
-import { useState, ChangeEvent } from "react";
+import { useState, ChangeEvent, useEffect } from "react";
 import { ArrivalData, initialArrivalData } from "../types";
 import { CameraScanner } from "./CameraScanner";
 import { MrzInputModal } from "./MrzInputModal";
@@ -8,7 +8,25 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 export function MainForm() {
-  const [travelers, setTravelers] = useState<ArrivalData[]>([{ ...initialArrivalData }]);
+  const [travelers, setTravelers] = useState<ArrivalData[]>(() => {
+    try {
+      const saved = localStorage.getItem("tdac_travelers");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load from local storage", e);
+    }
+    return [{ ...initialArrivalData }];
+  });
+  
+  useEffect(() => {
+    localStorage.setItem("tdac_travelers", JSON.stringify(travelers));
+  }, [travelers]);
+  
   const [activeIndex, setActiveIndex] = useState(0);
   const [isScanning, setIsScanning] = useState(false);
   const [isMrzModalOpen, setIsMrzModalOpen] = useState(false);
