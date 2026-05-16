@@ -1,7 +1,7 @@
 import { useState, ChangeEvent } from "react";
 import { ArrivalData, initialArrivalData } from "../types";
 import { CameraScanner } from "./CameraScanner";
-import { extractPassportData } from "../lib/gemini";
+import { extractPassportData } from "../lib/scanner";
 import { Scan, Copy, CheckCircle2, ChevronRight, Plane, User, Home, AlertCircle, Plus, X, Download } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
