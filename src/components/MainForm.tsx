@@ -2,14 +2,53 @@ import { useState, ChangeEvent } from "react";
 import { ArrivalData, initialArrivalData } from "../types";
 import { CameraScanner } from "./CameraScanner";
 import { extractPassportData } from "../lib/gemini";
-import { Scan, Copy, CheckCircle2, ChevronRight, Plane, User, Home, AlertCircle } from "lucide-react";
+import { Scan, Copy, CheckCircle2, ChevronRight, Plane, User, Home, AlertCircle, Plus, X, Download } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export function MainForm() {
-  const [data, setData] = useState<ArrivalData>(initialArrivalData);
+  const [travelers, setTravelers] = useState<ArrivalData[]>([{ ...initialArrivalData }]);
+  const [activeIndex, setActiveIndex] = useState(0);
   const [isScanning, setIsScanning] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const data = travelers[activeIndex];
+  const setData = (updateFn: (prev: ArrivalData) => ArrivalData) => {
+    setTravelers((prevList) => {
+      const newList = [...prevList];
+      newList[activeIndex] = updateFn(newList[activeIndex]);
+      return newList;
+    });
+  };
+
+  const addTraveler = () => {
+    const newTraveler = {
+      ...initialArrivalData,
+      flightNumber: data.flightNumber,
+      arrivalDate: data.arrivalDate,
+      entryPort: data.entryPort,
+      purposeOfVisit: data.purposeOfVisit,
+      accommodationName: data.accommodationName,
+      addressInThailand: data.addressInThailand,
+      email: data.email,
+      phone: data.phone,
+    };
+    setTravelers([...travelers, newTraveler]);
+    setActiveIndex(travelers.length);
+  };
+
+  const removeTraveler = (indexToRemove: number) => {
+    if (travelers.length === 1) return;
+    const newList = travelers.filter((_, idx) => idx !== indexToRemove);
+    setTravelers(newList);
+    if (activeIndex >= newList.length) {
+      setActiveIndex(newList.length - 1);
+    } else if (activeIndex > indexToRemove) {
+      setActiveIndex(activeIndex - 1);
+    }
+  };
 
   const handleCapture = async (base64Image: string) => {
     setIsScanning(false);
@@ -45,6 +84,55 @@ export function MainForm() {
     navigator.clipboard.writeText(text);
     setCopiedField(fieldName);
     setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text("Thai Arrival Card - Travelers Info", 14, 22);
+
+    travelers.forEach((t, idx) => {
+      if (idx > 0) {
+        doc.addPage();
+      }
+      
+      doc.setFontSize(14);
+      const name = t.firstName || t.lastName ? `${t.firstName} ${t.lastName}`.trim() : `Traveler ${idx + 1}`;
+      doc.text(name, 14, idx === 0 ? 35 : 22);
+      
+      const tableData = [
+        ["First Name", t.firstName],
+        ["Last Name", t.lastName],
+        ["Passport Number", t.passportNumber],
+        ["Nationality", t.nationality],
+        ["Gender", t.gender === "M" ? "Male" : t.gender === "F" ? "Female" : t.gender === "X" ? "Unspecified" : t.gender],
+        ["Date of Birth", t.dateOfBirth],
+        ["Expiry Date", t.expiryDate],
+        ["Flight Number", t.flightNumber],
+        ["Arrival Date", t.arrivalDate],
+        ["Port of Entry", t.entryPort],
+        ["Purpose of Visit", t.purposeOfVisit],
+        ["Accommodation", t.accommodationName],
+        ["Address inside Thailand", t.addressInThailand],
+        ["Email", t.email],
+        ["Phone", t.phone],
+      ];
+
+      autoTable(doc, {
+        startY: idx === 0 ? 45 : 32,
+        head: [["Field", "Value"]],
+        body: tableData,
+        theme: "striped",
+        headStyles: { fillColor: [37, 99, 235] },
+        styles: { fontSize: 11 },
+        columnStyles: {
+          0: { cellWidth: 60, fontStyle: 'bold' }
+        }
+      });
+    });
+
+    doc.save("Thai_Arrival_Cards.pdf");
   };
 
   const copyAll = () => {
@@ -147,7 +235,7 @@ Purpose: ${data.purposeOfVisit}
         {/* Right Section: Form Area */}
         <section className="flex-1 p-6 sm:p-10 lg:overflow-y-auto flex flex-col">
 
-          <div className="flex justify-between items-end mb-8">
+          <div className="flex justify-between items-end mb-6">
             <div>
               <h2 className="text-2xl font-bold text-slate-900">Application Details</h2>
               <p className="text-slate-500">Fill missing data to complete</p>
@@ -155,6 +243,43 @@ Purpose: ${data.purposeOfVisit}
             <div className="bg-blue-50 text-blue-700 px-3 py-1 rounded text-xs font-bold border border-blue-200">
               DRAFT
             </div>
+          </div>
+
+          <div className="flex gap-2 mb-8 overflow-x-auto pb-2 -mx-6 px-6 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {travelers.map((t, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setActiveIndex(idx)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm whitespace-nowrap transition-colors border group ${
+                  activeIndex === idx
+                    ? "bg-blue-50 border-blue-200 text-blue-700"
+                    : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                }`}
+              >
+                <User className="w-4 h-4" />
+                {t.firstName ? `${t.firstName} ${t.lastName}`.trim() : `Traveler ${idx + 1}`}
+                {travelers.length > 1 && (
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeTraveler(idx);
+                    }}
+                    className={`ml-1 hover:bg-red-100 hover:text-red-600 rounded-full p-0.5 transition-colors ${activeIndex === idx ? "text-blue-400" : "text-slate-400 opacity-0 group-hover:opacity-100"}`}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </span>
+                )}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={addTraveler}
+              className="flex items-center gap-1 px-4 py-2 rounded-lg font-bold text-sm whitespace-nowrap bg-white border border-dashed border-slate-300 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add
+            </button>
           </div>
 
         <form className="space-y-10 flex-1 content-start pb-8">
@@ -224,6 +349,14 @@ Purpose: ${data.purposeOfVisit}
             Copy all details securely, then paste them directly into the official immigration site.
           </p>
           <div className="flex flex-col sm:flex-row w-full md:w-auto gap-4">
+            <button
+              onClick={exportPDF}
+              className="px-6 py-4 font-bold text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-colors flex items-center justify-center gap-2"
+              title="Export all travelers to PDF"
+            >
+              <Download className="w-5 h-5" />
+              <span className="hidden lg:inline">Export PDF</span>
+            </button>
             <a
               href="https://tdac.immigration.go.th/arrival-card/#/home"
               target="_blank"
