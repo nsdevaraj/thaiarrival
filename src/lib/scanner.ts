@@ -55,6 +55,10 @@ export async function extractPassportData(base64Image: string): Promise<Passport
     throw new Error("Could not detect an MRZ in the scanned image. Please try again.");
   }
 
+  return parseMrzLines(mrzLines);
+}
+
+export function parseMrzLines(mrzLines: string[]): PassportData {
   try {
     const parsed = parse(mrzLines);
     

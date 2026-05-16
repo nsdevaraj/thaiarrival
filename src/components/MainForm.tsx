@@ -1,8 +1,9 @@
 import { useState, ChangeEvent } from "react";
 import { ArrivalData, initialArrivalData } from "../types";
 import { CameraScanner } from "./CameraScanner";
+import { MrzInputModal } from "./MrzInputModal";
 import { extractPassportData } from "../lib/scanner";
-import { Scan, Copy, CheckCircle2, ChevronRight, Plane, User, Home, AlertCircle, Plus, X, Download } from "lucide-react";
+import { Scan, Copy, CheckCircle2, ChevronRight, Plane, User, Home, AlertCircle, Plus, X, Download, Keyboard } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -10,6 +11,7 @@ export function MainForm() {
   const [travelers, setTravelers] = useState<ArrivalData[]>([{ ...initialArrivalData }]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isScanning, setIsScanning] = useState(false);
+  const [isMrzModalOpen, setIsMrzModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -56,22 +58,26 @@ export function MainForm() {
     setError(null);
     try {
       const passportInfo = await extractPassportData(base64Image);
-      setData((prev) => ({
-        ...prev,
-        firstName: passportInfo.firstName || prev.firstName,
-        lastName: passportInfo.lastName || prev.lastName,
-        passportNumber: passportInfo.passportNumber || prev.passportNumber,
-        nationality: passportInfo.nationality || prev.nationality,
-        gender: passportInfo.gender || prev.gender,
-        dateOfBirth: passportInfo.dateOfBirth || prev.dateOfBirth,
-        expiryDate: passportInfo.expiryDate || prev.expiryDate,
-      }));
-    } catch (err) {
+      handleManualDataCapture(passportInfo);
+    } catch (err: any) {
       console.error(err);
-      setError("Failed to extract data. Please try scanning again or enter manually.");
+      setError(err.message || "Failed to extract data. Please try scanning again or enter manually.");
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleManualDataCapture = (passportInfo: any) => {
+    setData((prev) => ({
+      ...prev,
+      firstName: passportInfo.firstName || prev.firstName,
+      lastName: passportInfo.lastName || prev.lastName,
+      passportNumber: passportInfo.passportNumber || prev.passportNumber,
+      nationality: passportInfo.nationality || prev.nationality,
+      gender: passportInfo.gender || prev.gender,
+      dateOfBirth: passportInfo.dateOfBirth || prev.dateOfBirth,
+      expiryDate: passportInfo.expiryDate || prev.expiryDate,
+    }));
   };
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -210,13 +216,22 @@ Purpose: ${data.purposeOfVisit}
             <p className="text-sm text-slate-600">Auto-extract your personal info instantly.</p>
           </div>
           
-          <button
-            onClick={() => setIsScanning(true)}
-            className="w-full py-4 bg-white border border-slate-200 rounded-xl font-bold text-slate-700 shadow-sm flex items-center justify-center gap-2 transition-all hover:bg-slate-50 active:bg-slate-100"
-          >
-            <Scan className="w-6 h-6 text-blue-600" />
-            Launch Scanner
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={() => setIsScanning(true)}
+              className="flex-1 py-4 bg-white border border-slate-200 rounded-xl font-bold text-slate-700 shadow-sm flex items-center justify-center gap-2 transition-all hover:bg-slate-50 active:bg-slate-100"
+            >
+              <Scan className="w-6 h-6 text-blue-600" />
+              Launch Scanner
+            </button>
+            <button
+              onClick={() => setIsMrzModalOpen(true)}
+              className="flex-1 py-4 bg-white border border-slate-200 rounded-xl font-bold text-slate-700 shadow-sm flex items-center justify-center gap-2 transition-all hover:bg-slate-50 active:bg-slate-100"
+            >
+              <Keyboard className="w-6 h-6 text-indigo-600" />
+              Enter MRZ Text
+            </button>
+          </div>
           
           {error && (
             <div className="mt-6 p-4 bg-red-50 text-red-700 font-medium text-sm rounded-xl flex items-start gap-3 border border-red-100">
@@ -381,6 +396,12 @@ Purpose: ${data.purposeOfVisit}
         <CameraScanner
           onClose={() => setIsScanning(false)}
           onCapture={handleCapture}
+        />
+      )}
+      {isMrzModalOpen && (
+        <MrzInputModal
+          onClose={() => setIsMrzModalOpen(false)}
+          onCapture={handleManualDataCapture}
         />
       )}
     </div>
